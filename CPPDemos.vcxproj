@@ -22,7 +22,7 @@
     <ClInclude Include="utils\CommonHeaders.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ScraperTest.cpp" />
+    <ClCompile Include="AsyncTask.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

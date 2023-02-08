@@ -14,7 +14,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ScraperTest.cpp">
+    <ClCompile Include="AsyncTask.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
