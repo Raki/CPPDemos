@@ -12,15 +12,7 @@ void fillArr(std::vector<float> &arr,size_t offSet,size_t sze)
 		arr.at(i) = rand();
 	}
 }
-void foo(std::vector<int> &arr)
-{
 
-}
-bool is_prime(int x) {
-	fmt::print("Calculating. Please, wait...\n");
-	for (int i = 2; i < x; ++i) if (x % i == 0) return false;
-	return true;
-}
 
 int main()
 {
