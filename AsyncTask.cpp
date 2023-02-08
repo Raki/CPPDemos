@@ -33,8 +33,8 @@ int main()
 	fmt::print("Time taken for filling array sequentially {} milli sec\n", std::chrono::duration_cast<std::chrono::milliseconds>(endTime - beginTime).count());
 
 	beginTime = std::chrono::system_clock::now();
-	auto part1 = std::async(std::launch::deferred,fillArr, std::ref(arr1),static_cast<size_t>(0), static_cast<size_t>(1000000));
-	auto part2 = std::async(std::launch::deferred,fillArr, std::ref(arr2),static_cast<size_t>(0), static_cast<size_t>(1000000));
+	auto part1 = std::async(std::launch::async,fillArr, std::ref(arr1),static_cast<size_t>(0), static_cast<size_t>(1000000));
+	auto part2 = std::async(std::launch::async,fillArr, std::ref(arr2),static_cast<size_t>(0), static_cast<size_t>(1000000));
 	part1.get();
 	part2.get();
 	endTime = std::chrono::system_clock::now();
