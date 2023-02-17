@@ -14,8 +14,13 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AsyncTask.cpp">
+    <ClCompile Include="HashInclude.cpp">
       <Filter>src</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="sample.txt">
+      <Filter>src</Filter>
+    </Text>
   </ItemGroup>
 </Project>
