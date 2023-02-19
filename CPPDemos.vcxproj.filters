@@ -14,13 +14,8 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="HashInclude.cpp">
+    <ClCompile Include="MultiTask.cpp">
       <Filter>src</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="sample.txt">
-      <Filter>src</Filter>
-    </Text>
   </ItemGroup>
 </Project>
