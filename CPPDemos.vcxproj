@@ -22,7 +22,7 @@
     <ClInclude Include="utils\CommonHeaders.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MultiTask.cpp" />
+    <ClCompile Include="ObjecLifeTime.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

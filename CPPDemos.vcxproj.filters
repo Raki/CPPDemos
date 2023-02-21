@@ -14,7 +14,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MultiTask.cpp">
+    <ClCompile Include="ObjecLifeTime.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
