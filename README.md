@@ -8,3 +8,5 @@ C++ Practice
 * Raw strings
 
 * Processing image pixels using multi tasking
+
+* Check if given uint is power of 2 in constant time
