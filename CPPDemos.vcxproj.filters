@@ -14,7 +14,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ObjecLifeTime.cpp">
+    <ClCompile Include="PowerOf2.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

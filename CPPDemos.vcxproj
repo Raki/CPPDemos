@@ -22,7 +22,7 @@
     <ClInclude Include="utils\CommonHeaders.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ObjecLifeTime.cpp" />
+    <ClCompile Include="PowerOf2.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
