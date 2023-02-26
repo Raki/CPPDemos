@@ -14,7 +14,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CopyConstructor.cpp">
+    <ClCompile Include="BitTwiddling.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
