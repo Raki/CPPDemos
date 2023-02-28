@@ -53,6 +53,9 @@ int main()
 	/*
 	* reinterpret_cast when used processor does not invoke any calcuations, it simply treats a set of bits in the
 	* memory like if it had another type.
+	* 
+	* reinterpret_cast is not portable due to byte order
+	* 
 	*/
 	//case 3
 	Base *b3 = new Base();
@@ -65,7 +68,12 @@ int main()
 
 	d3 = reinterpret_cast<Derived*>(b3); //Only for the purpose of test, here f of d3 will have undefined value
 
-	fmt::print("..");
+	//case 4
+	uint16_t v = 0x0001;
+	uint8_t* ptr = reinterpret_cast<uint8_t*>(&v);
+	auto data = *ptr;
+	fmt::print("Is big endien {}", data==1);
+
 }
 
 
