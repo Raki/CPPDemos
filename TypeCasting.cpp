@@ -20,6 +20,11 @@ int main()
 
 	/*
 	* static_cast when used processor needs to invoke some calculations handle the bit representations
+	* 
+	* This cast can be used to reverse the implicit cast if you know the original type
+	* 
+	* static_cast performs no runtime checks
+	* 
 	* Ex. int(26) to unsigned float(26.f)
 	*/
 	struct Base
@@ -74,6 +79,46 @@ int main()
 	auto data = *ptr;
 	fmt::print("Is big endien {}", data==1);
 
+	/*
+	* dynamic_cast is useful when you don't know what the dynamic type of the object is. 
+	  It returns a null pointer if the object referred to doesn't contain the type casted to as a base class
+	  (when you cast to a reference, a bad_cast exception is thrown in that case).
+	  
+	  You can not use dynamic_cast for downcast (casting to a derived class) if the argument type is not polymorphic. 
+	  
+
+	  dynamic_cast performs runtime checks
+
+	*/
+	{
+		class Base1
+		{
+		public:
+			virtual void print()
+			{
+				fmt::print("print Base\n");
+			}
+		};
+
+		class Derived1 : public Base1
+		{
+		public:
+			void print()
+			{
+				fmt::print("print Derived\n");
+			}
+		};
+
+		Base1* b = new Base1();
+		Derived1* d;
+		Derived1* d2 = new Derived1();
+
+		d = dynamic_cast<Derived1*>(b); // downcast
+		b = dynamic_cast<Base1*>(d2); // upcast
+
+		delete b;
+		delete d2;
+	}
 }
 
 
