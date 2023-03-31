@@ -44,12 +44,17 @@ int main()
 	
 	Point p(0,0,0);
 	Point p2 = p; // copy construct
+	              /*
+				  * A copy constructor is used to initialize a previously uninitialized object from some other object's data.
+				  */
 	Point p3(p2); // copy construct
 	Point p4(1, 2, 3);
 	
-	Point sum = add(p, p4); // no copy construct ??
-
-	sum.x += 1;
+	p = add(p, p4); // assignment operator
+					/*
+					* An assignment operator is used to replace the data of a previously initialized object with some other object's data.
+					*/
+	p.x += 1;
 	return EXIT_SUCCESS;
 }
 
