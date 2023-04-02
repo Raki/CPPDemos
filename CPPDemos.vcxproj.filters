@@ -14,7 +14,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Const.cpp">
+    <ClCompile Include="LinkedList.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
