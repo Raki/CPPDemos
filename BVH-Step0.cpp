@@ -8,6 +8,14 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
+/*
+* Below code is taken from 
+* https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
+*/
+
+#pragma region vars
+
+using uint = unsigned int;
 constexpr size_t N=64;
 constexpr float SWIDTH = 512;
 constexpr float SHEIGHT = 512;
@@ -27,6 +35,62 @@ struct Ray
 	float t = 1e30f;
 };
 
+struct AABB
+{
+    glm::vec3 min;
+    glm::vec3 max;
+};
+
+//Below is inefficient in terms of memory
+//struct BVHNode
+//{
+//    AABB nodeBounds;
+//    BVHNode* left, * right;
+//    bool isLeaf;
+//    std::vector<Tri*> primitives;
+//};
+
+struct BVHNode
+{
+    glm::vec3 aabbMin, aabbMax;
+    uint leftChild,rightChild;
+    bool isLeaf;
+    uint firstPrim, primCount;
+};
+
+// For N primitives BVH will max of 2N=1 NODES  
+BVHNode bvhNodes[2 * N - 1];
+uint rootNodeIdx = 1, nodesUsed = 1;
+
+#pragma endregion vars
+
+#pragma region prototypes
+void buildBVH();
+void intersectTri(const Tri& tri, Ray& ray);
+void updateNodeBounds(const uint& nodeIdx);
+glm::vec3 minOf2(const glm::vec3& v1,const glm::vec3& v2);
+glm::vec3 maxOf2(const glm::vec3& v1, const glm::vec3& v2);
+#pragma endregion prototypes
+
+#pragma region functions
+
+void buildBVH()
+{
+    for (size_t i=0;i<N;i++)
+    {
+        tris[i].centroid = (tris[i].v0 + tris[i].v1 + tris[i].v2) * 0.3333f;
+    }
+
+    //assign all triangles to root Node
+    BVHNode& root = bvhNodes[rootNodeIdx];
+    root.leftChild = root.rightChild = 0;
+    root.firstPrim = 0; 
+    root.primCount = N;
+
+    updateNodeBounds(rootNodeIdx);
+    subdivide(rootNodeIdx);
+}
+
 void intersectTri(const Tri &tri,Ray &ray)
 {
     const glm::vec3 edge2 = tri.v2 - tri.v0;
@@ -45,6 +109,41 @@ void intersectTri(const Tri &tri,Ray &ray)
     if (t > 0.0001f) ray.t = std::min(ray.t, t);
 }
 
+void updateNodeBounds(const uint& nodeIdx)
+{
+    BVHNode& node = bvhNodes[nodeIdx];
+    node.aabbMin = glm::vec3(1e30f);
+    node.aabbMax = glm::vec3(-1e30f);
+
+    for (size_t first=node.firstPrim,i=0;i<node.primCount;i++)
+    {
+        Tri& leafTri = tris[first + i];
+        node.aabbMin = minOf2(node.aabbMin,leafTri.v0);
+        node.aabbMin = minOf2(node.aabbMin, leafTri.v1);
+        node.aabbMin = minOf2(node.aabbMin, leafTri.v2);
+        node.aabbMax = minOf2(node.aabbMax, leafTri.v0);
+        node.aabbMax = minOf2(node.aabbMax, leafTri.v1);
+        node.aabbMax = minOf2(node.aabbMax, leafTri.v2);
+    }
+}
+
+glm::vec3 minOf2(const glm::vec3& v1, const glm::vec3& v2)
+{
+    auto x = (v1.x < v2.x) ? v1.x : v2.x;
+    auto y = (v1.y < v2.y) ? v1.y : v2.y;
+    auto z = (v1.z < v2.z) ? v1.z : v2.z;
+    return glm::vec3(x,y,z);
+}
+
+glm::vec3 maxOf2(const glm::vec3& v1, const glm::vec3& v2)
+{
+    auto x = (v1.x > v2.x) ? v1.x : v2.x;
+    auto y = (v1.y > v2.y) ? v1.y : v2.y;
+    auto z = (v1.z > v2.z) ? v1.z : v2.z;
+    return glm::vec3(x, y, z);
+}
+
+#pragma endregion functions
 int main()
 {
     //Generate triangles
@@ -58,6 +157,13 @@ int main()
         tris[i].v2 = tris[i].v0 + r2;
     }
 	
+
+    //Creat BVH
+    
+    
+
+
+
     constexpr glm::vec3 CAMPOS = glm::vec3(0,0,25);
     constexpr glm::vec3 TopLeft = glm::vec3(-1, 1, 15);
     constexpr glm::vec3 TopRight = glm::vec3(1, 1, 15);
