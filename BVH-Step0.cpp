@@ -68,8 +68,9 @@ uint rootNodeIdx = 1, nodesUsed = 1;
 void buildBVH();
 void intersectTri(const Tri& tri, Ray& ray);
 void updateNodeBounds(const uint& nodeIdx);
-glm::vec3 minOf2(const glm::vec3& v1,const glm::vec3& v2);
-glm::vec3 maxOf2(const glm::vec3& v1, const glm::vec3& v2);
+inline glm::vec3 minOf2(const glm::vec3& v1,const glm::vec3& v2);
+inline glm::vec3 maxOf2(const glm::vec3& v1, const glm::vec3& v2);
+inline void swap(Tri& tri1,Tri& tri2);
 #pragma endregion prototypes
 
 #pragma region functions
@@ -88,7 +89,7 @@ void buildBVH()
     root.primCount = N;
 
     updateNodeBounds(rootNodeIdx);
-    subdivide(rootNodeIdx);
+    //subdivide(rootNodeIdx);
 }
 
 void intersectTri(const Tri &tri,Ray &ray)
@@ -127,7 +128,7 @@ void updateNodeBounds(const uint& nodeIdx)
     }
 }
 
-glm::vec3 minOf2(const glm::vec3& v1, const glm::vec3& v2)
+inline glm::vec3 minOf2(const glm::vec3& v1, const glm::vec3& v2)
 {
     auto x = (v1.x < v2.x) ? v1.x : v2.x;
     auto y = (v1.y < v2.y) ? v1.y : v2.y;
@@ -135,12 +136,16 @@ glm::vec3 minOf2(const glm::vec3& v1, const glm::vec3& v2)
     return glm::vec3(x,y,z);
 }
 
-glm::vec3 maxOf2(const glm::vec3& v1, const glm::vec3& v2)
+inline glm::vec3 maxOf2(const glm::vec3& v1, const glm::vec3& v2)
 {
     auto x = (v1.x > v2.x) ? v1.x : v2.x;
     auto y = (v1.y > v2.y) ? v1.y : v2.y;
     auto z = (v1.z > v2.z) ? v1.z : v2.z;
     return glm::vec3(x, y, z);
+}
+
+inline void swap(Tri& tri1, Tri& tri2)
+{
 }
 
 #pragma endregion functions
@@ -190,15 +195,15 @@ int main()
                 intersectTri(tris[i], ray);
                 if (ray.t < 1e30f)
                 {
-                    pixels.at(pixelIndex) = triColor.r;
-                    pixels.at(pixelIndex+1) = triColor.g;
-                    pixels.at(pixelIndex+2) = triColor.b;
+                    pixels.at(pixelIndex)   = static_cast<unsigned char>(triColor.r);
+                    pixels.at(pixelIndex+1) = static_cast<unsigned char>(triColor.g);
+                    pixels.at(pixelIndex+2) = static_cast<unsigned char>(triColor.b);
                 }
             }
         }
     }
 
-    stbi_write_jpg("render.jpg", SWIDTH, SHEIGHT, 3, pixels.data(), 100);
+    stbi_write_jpg("render.jpg", static_cast<int>(SWIDTH), static_cast<int>(SHEIGHT), 3, pixels.data(), 100);
 
 	return EXIT_SUCCESS;
 }
