@@ -14,7 +14,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LinkedList.cpp">
+    <ClCompile Include="BVH-Step0.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
