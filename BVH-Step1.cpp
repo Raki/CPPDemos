@@ -9,6 +9,8 @@
 #include <stb_image_write.h>
 
 #define USE_BVH
+//#define MID_POINT_SPLIT
+#define SAH_SPLIT // Surface Area Heuristic
 /*
 * Below code is inspired by
 * https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
@@ -18,8 +20,8 @@
 
 using uint = unsigned int;
 constexpr size_t N= 12582;
-constexpr float SWIDTH = 512;
-constexpr float SHEIGHT = 512;
+constexpr float SWIDTH = 640;
+constexpr float SHEIGHT = 640;
 
 struct Tri
 {
@@ -37,6 +39,13 @@ struct Ray
 	float t = 1e30f;
 };
 
+struct AABB
+{
+    glm::vec3 bMin = glm::vec3(1e30f);
+    glm::vec3 bMax = glm::vec3(-1e30f);
+    void grow(glm::vec3 p);
+    float area();
+};
 
 __declspec(align(32)) struct BVHNode
 {
@@ -63,6 +72,8 @@ void updateNodeBounds(const uint& nodeIdx);
 void subdivide(uint nodeIdx);
 void intersectBVH(Ray &ray,const uint nodeIndex);
 bool intersectAABB(const Ray& ray,const glm::vec3 bMin,const glm::vec3 bMax);
+/*Surface Area Heauristic*/
+float evaluateSAH(BVHNode &Node,int axis,float pos);
 inline glm::vec3 minOf2(const glm::vec3& v1,const glm::vec3& v2);
 inline glm::vec3 maxOf2(const glm::vec3& v1, const glm::vec3& v2);
 inline void swap(Tri& tri1,Tri& tri2);
@@ -77,7 +88,7 @@ void buildBVH()
     for (size_t i=0;i<N;i++)
     {
         tris[i].centroid = (tris[i].v0 + tris[i].v1 + tris[i].v2) * 0.3333f;
-        trisIdx[i] = i;
+        trisIdx[i] = static_cast<uint>(i);
     }
 
     //assign all triangles to root Node
@@ -129,17 +140,41 @@ void updateNodeBounds(const uint& nodeIdx)
 void subdivide(uint nodeIdx)
 {
     BVHNode& node = bvhNodes[nodeIdx];
+    
+    float splitPos;
+    int axis = 0;
+
+#ifdef MID_POINT_SPLIT
     //terminate recursion
     if (node.triCount <= 2)
         return;
     
-    //split plane axis and position
+    //split plane axis and position using midpoint split.
     auto extent = node.aabbMax - node.aabbMin;
-    int axis = 0;
     if (extent.y > extent.x) axis = 1;
     if (extent.z > extent[axis]) axis = 2;
 
-    float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
+    splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
+#else
+    int bestAxis = -1;
+    float bestPos = 0, bestCost = 1e30f;
+    for (int axs = 0; axs < 3; axs++) for (uint i = 0; i < node.triCount; i++)
+    {
+        Tri& triangle = tris[trisIdx[node.leftFirst + i]];
+        float candidatePos = triangle.centroid[axis];
+        float cost = evaluateSAH(node, axs, candidatePos);
+        if (cost < bestCost)
+            bestPos = candidatePos, bestAxis = axs, bestCost = cost;
+    }
+    axis = bestAxis;
+    splitPos = bestPos;
+
+    //terminate recursion
+    glm::vec3 e = node.aabbMax - node.aabbMin; // extent of parent
+    float parentArea = e.x * e.y + e.y * e.z + e.z * e.x;
+    float parentCost = node.triCount * parentArea;
+    if (bestCost >= parentCost) return;
+#endif
 
     int i = node.leftFirst;
     int j = i+node.triCount-1;
@@ -208,6 +243,33 @@ bool intersectAABB(const Ray& ray, const glm::vec3 bMin, const glm::vec3 bMax)
     return tmax >= tmin && tmin < ray.t&& tmax > 0;
 }
 
+float evaluateSAH(BVHNode& node, int axis, float pos)
+{
+    //determine triangle counts and bounds for this split candidate
+    AABB leftBox, rightBox;
+    int leftCount = 0, rightCount = 0;
+    for (uint i=0;i<node.triCount;i++)
+    {
+        Tri& triangle = tris[trisIdx[node.leftFirst+i]];
+        if (triangle.centroid[axis]<pos)
+        {
+            leftCount++;
+            leftBox.grow(triangle.v0);
+            leftBox.grow(triangle.v1);
+            leftBox.grow(triangle.v2);
+        }
+        else
+        {
+            rightCount++;
+            rightBox.grow(triangle.v0);
+            rightBox.grow(triangle.v1);
+            rightBox.grow(triangle.v2);
+        }
+    }
+    float cost = leftCount * leftBox.area() + rightCount * rightBox.area();
+    return cost>0?cost:1e30f;
+}
+
 inline glm::vec3 minOf2(const glm::vec3& v1, const glm::vec3& v2)
 {
     auto x = (v1.x < v2.x) ? v1.x : v2.x;
@@ -253,20 +315,36 @@ void loadDataFromFile(std::string fileName)
     fclose(file);
 }
 
+void AABB::grow(glm::vec3 p)
+{
+    bMin = minOf2(bMin, p);
+    bMax = maxOf2(bMax, p);
+}
+
+float AABB::area()
+{
+    auto extent = bMax - bMin;
+    return (extent.x * extent.x) + (extent.y * extent.y) + (extent.z * extent.z);
+}
+
 #pragma endregion functions
 
 int main()
 {
+    //work in progress
+    assert(false);
+    
     //Generate triangles
     loadDataFromFile("assets/unity.tri");
 
     //Creat BVH
     buildBVH();
-   
-    constexpr glm::vec3 CAMPOS = glm::vec3(-3.5f,-0.2f,-4.5f);
-    constexpr glm::vec3 TopLeft = glm::vec3(-2, 2, 2);
-    constexpr glm::vec3 TopRight = glm::vec3(2, 2, 2);
-    constexpr glm::vec3 BottomLeft = glm::vec3(-2, -2, 2);
+
+    //float3 p0(-1, 1, 2), p1(1, 1, 2), p2(-1, -1, 2);
+    constexpr glm::vec3 CAMPOS = glm::vec3(-1.5f, -0.2f, -2.5f);
+    constexpr glm::vec3 TopLeft = glm::vec3(-1, 1, 2);
+    constexpr glm::vec3 TopRight = glm::vec3(1, 1, 2);
+    constexpr glm::vec3 BottomLeft = glm::vec3(-1, -1, 2);
 
 
     constexpr size_t pixCount = static_cast<size_t>(SWIDTH)* static_cast<size_t>(SHEIGHT)*3;
@@ -279,7 +357,8 @@ int main()
     {
         for (int x = 0; x < SWIDTH; x++)
         {
-            auto pixelPos = TopLeft + (TopRight - TopLeft) * (x / SWIDTH) +
+            auto pixelPos = TopLeft + 
+                ((TopRight   - TopLeft) * (x / SWIDTH) )+
                 ((BottomLeft - TopLeft) * (y / SHEIGHT));
             ray.O = CAMPOS;
             ray.D = glm::normalize(pixelPos-CAMPOS);
