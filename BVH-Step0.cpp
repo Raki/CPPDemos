@@ -10,7 +10,7 @@
 
 #define USE_BVH
 /*
-* Below code is taken from 
+* Below code is inspired by
 * https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
 */
 
@@ -38,11 +38,11 @@ struct Ray
 };
 
 
-struct BVHNode
+__declspec(align(32)) struct BVHNode
 {
     glm::vec3 aabbMin, aabbMax;
-    uint leftChild;
-    uint firstTriIndex, triCount;
+    uint leftFirst, //left node if triCount=0 otherwise firstTriIndex
+        triCount;
     bool isLeaf()
     {
         return triCount > 0;
@@ -81,8 +81,7 @@ void buildBVH()
 
     //assign all triangles to root Node
     BVHNode& root = bvhNodes[rootNodeIdx];
-    root.leftChild = 0;
-    root.firstTriIndex = 0; 
+    root.leftFirst= 0;
     root.triCount = N;
 
     updateNodeBounds(rootNodeIdx);
@@ -113,7 +112,7 @@ void updateNodeBounds(const uint& nodeIdx)
     node.aabbMin = glm::vec3(1e30f);
     node.aabbMax = glm::vec3(-1e30f);
 
-    for (size_t first=node.firstTriIndex,i=0;i<node.triCount;i++)
+    for (size_t first=node.leftFirst,i=0;i<node.triCount;i++)
     {
         auto leafTriIndex = trisIdx[first + i];
         Tri& leafTri = tris[leafTriIndex];
@@ -141,7 +140,7 @@ void subdivide(uint nodeIdx)
 
     float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
 
-    int i = node.firstTriIndex;
+    int i = node.leftFirst;
     int j = i+node.triCount-1;
 
     while (i <= j)
@@ -156,19 +155,19 @@ void subdivide(uint nodeIdx)
         }
     }
 
-    int leftCount = i - node.firstTriIndex;
+    int leftCount = i - node.leftFirst;
     if (leftCount == 0 || leftCount == node.triCount) return;
     // create child nodes
     int leftChildIdx = nodesUsed++;
     int rightChildIdx = nodesUsed++;
 
-    bvhNodes[leftChildIdx].firstTriIndex= node.firstTriIndex;
+    bvhNodes[leftChildIdx].leftFirst= node.leftFirst;
     bvhNodes[leftChildIdx].triCount = leftCount;
 
-    bvhNodes[rightChildIdx].firstTriIndex= i;
+    bvhNodes[rightChildIdx].leftFirst= i;
     bvhNodes[rightChildIdx].triCount= node.triCount- leftCount;
     node.triCount = 0;
-    node.leftChild = leftChildIdx;
+    node.leftFirst = leftChildIdx;
 
     updateNodeBounds(leftChildIdx);
     updateNodeBounds(rightChildIdx);
@@ -187,13 +186,13 @@ void intersectBVH(Ray& ray, const uint nodeIndex)
     {
         for (size_t i = 0; i < node.triCount; i++)
         {
-            intersectTri(tris[trisIdx[node.firstTriIndex + i]], ray);
+            intersectTri(tris[trisIdx[node.leftFirst + i]], ray);
         }
     }
     else
     {
-        intersectBVH(ray, node.leftChild);
-        intersectBVH(ray, node.leftChild+1);
+        intersectBVH(ray, node.leftFirst);
+        intersectBVH(ray, node.leftFirst+1);
     }
 }
 
@@ -239,6 +238,7 @@ inline void swap(uint& v1, uint& v2)
 }
 
 #pragma endregion functions
+
 int main()
 {
     //Generate triangles
@@ -282,25 +282,19 @@ int main()
            
 #ifdef USE_BVH
             intersectBVH(ray, rootNodeIdx);
+#else
+
+            for (int i = 0; i < N; i++)
+            {
+                intersectTri(tris[i], ray);
+            }
+#endif
             if (ray.t < 1e30f)
             {
                 pixels.at(pixelIndex) = static_cast<unsigned char>(triColor.r);
                 pixels.at(pixelIndex + 1) = static_cast<unsigned char>(triColor.g);
                 pixels.at(pixelIndex + 2) = static_cast<unsigned char>(triColor.b);
             }
-#else
-
-            for (int i = 0; i < N; i++)
-            {
-                intersectTri(tris[i], ray);
-                if (ray.t < 1e30f)
-                {
-                    pixels.at(pixelIndex)   = static_cast<unsigned char>(triColor.r);
-                    pixels.at(pixelIndex+1) = static_cast<unsigned char>(triColor.g);
-                    pixels.at(pixelIndex+2) = static_cast<unsigned char>(triColor.b);
-                }
-            }
-#endif
         }
 
     }
