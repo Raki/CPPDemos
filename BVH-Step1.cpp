@@ -9,7 +9,7 @@
 #include <stb_image_write.h>
 
 #define USE_BVH
-//#define MID_POINT_SPLIT
+
 #define SAH_SPLIT // Surface Area Heuristic
 /*
 * Below code is inspired by
@@ -20,8 +20,8 @@
 
 using uint = unsigned int;
 constexpr size_t N= 12582;
-constexpr float SWIDTH = 640;
-constexpr float SHEIGHT = 640;
+constexpr float SWIDTH = 512;
+constexpr float SHEIGHT = 512;
 
 struct Tri
 {
@@ -60,7 +60,7 @@ __declspec(align(32)) struct BVHNode
 };
 
 // For N primitives BVH will max of 2N=1 NODES  
-BVHNode bvhNodes[2 * N - 1];
+BVHNode* bvhNodes;
 uint rootNodeIdx = 0, nodesUsed = 1;
 
 #pragma endregion vars
@@ -71,13 +71,13 @@ void intersectTri(const Tri& tri, Ray& ray);
 void updateNodeBounds(const uint& nodeIdx);
 void subdivide(uint nodeIdx);
 void intersectBVH(Ray &ray,const uint nodeIndex);
-bool intersectAABB(const Ray& ray,const glm::vec3 bMin,const glm::vec3 bMax);
+float intersectAABB(const Ray& ray,const glm::vec3 bMin,const glm::vec3 bMax);
 /*Surface Area Heauristic*/
 float evaluateSAH(BVHNode &Node,int axis,float pos);
 inline glm::vec3 minOf2(const glm::vec3& v1,const glm::vec3& v2);
 inline glm::vec3 maxOf2(const glm::vec3& v1, const glm::vec3& v2);
-inline void swap(Tri& tri1,Tri& tri2);
-inline void swap(uint& v1, uint& v2);
+template <typename T>
+inline void swap(T& v1, T& v2);
 void loadDataFromFile(std::string fileName);
 #pragma endregion prototypes
 
@@ -85,10 +85,14 @@ void loadDataFromFile(std::string fileName);
 
 void buildBVH()
 {
+    bvhNodes = (BVHNode*)_aligned_malloc(sizeof(BVHNode)*N*2,64);
+
+    for (size_t i = 0; i < N; i++)
+        trisIdx[i] = static_cast<uint>(i);
+
     for (size_t i=0;i<N;i++)
     {
         tris[i].centroid = (tris[i].v0 + tris[i].v1 + tris[i].v2) * 0.3333f;
-        trisIdx[i] = static_cast<uint>(i);
     }
 
     //assign all triangles to root Node
@@ -97,7 +101,10 @@ void buildBVH()
     root.triCount = N;
 
     updateNodeBounds(rootNodeIdx);
+    auto bgn = std::chrono::high_resolution_clock::now();
     subdivide(rootNodeIdx);
+    auto end = std::chrono::high_resolution_clock::now();
+    fmt::print("Time taken to build subdivide {}\n", std::chrono::duration_cast<std::chrono::milliseconds>(end - bgn).count());
 }
 
 void intersectTri(const Tri &tri,Ray &ray)
@@ -144,18 +151,6 @@ void subdivide(uint nodeIdx)
     float splitPos;
     int axis = 0;
 
-#ifdef MID_POINT_SPLIT
-    //terminate recursion
-    if (node.triCount <= 2)
-        return;
-    
-    //split plane axis and position using midpoint split.
-    auto extent = node.aabbMax - node.aabbMin;
-    if (extent.y > extent.x) axis = 1;
-    if (extent.z > extent[axis]) axis = 2;
-
-    splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
-#else
     int bestAxis = -1;
     float bestPos = 0, bestCost = 1e30f;
     for (int axs = 0; axs < 3; axs++) for (uint i = 0; i < node.triCount; i++)
@@ -174,7 +169,7 @@ void subdivide(uint nodeIdx)
     float parentArea = e.x * e.y + e.y * e.z + e.z * e.x;
     float parentCost = node.triCount * parentArea;
     if (bestCost >= parentCost) return;
-#endif
+
 
     int i = node.leftFirst;
     int j = i+node.triCount-1;
@@ -215,24 +210,56 @@ void subdivide(uint nodeIdx)
 
 void intersectBVH(Ray& ray, const uint nodeIndex)
 {
-    BVHNode& node = bvhNodes[nodeIndex];
-    if (!intersectAABB(ray, node.aabbMin, node.aabbMax)) return;
+    BVHNode* node = &bvhNodes[nodeIndex];
+    BVHNode* stack[64];
 
-    if (node.isLeaf())
+    uint stackPtr = 0;
+
+    while (1)
     {
-        for (size_t i = 0; i < node.triCount; i++)
+        if (node->isLeaf())
         {
-            intersectTri(tris[trisIdx[node.leftFirst + i]], ray);
+            for (uint i=0;i<node->triCount;i++)
+            {
+                intersectTri(tris[trisIdx[node->leftFirst + i]], ray);
+            }
+            if (stackPtr == 0)
+                break;
+            else
+                node = stack[--stackPtr];
+            continue;
+        }
+
+        auto child1 = &bvhNodes[node->leftFirst];
+        auto child2 = &bvhNodes[node->leftFirst+1];
+
+        float dist1 = intersectAABB(ray, child1->aabbMin, child1->aabbMax);
+        float dist2 = intersectAABB(ray, child2->aabbMin, child2->aabbMax);
+
+        if (dist1 > dist2)
+        {
+            swap<float>(dist1,dist2);
+            swap<BVHNode*>(child1,child2);
+        }
+
+        if (dist1 == 1e30f)
+        {
+            if (stackPtr == 0)
+                break;
+            else
+                node = stack[--stackPtr];
+        }
+        else
+        {
+            node = child1;
+            if (dist2 != 1e30f)
+                stack[stackPtr++] = child2;
         }
     }
-    else
-    {
-        intersectBVH(ray, node.leftFirst);
-        intersectBVH(ray, node.leftFirst+1);
-    }
+    
 }
 
-bool intersectAABB(const Ray& ray, const glm::vec3 bMin, const glm::vec3 bMax)
+float intersectAABB(const Ray& ray, const glm::vec3 bMin, const glm::vec3 bMax)
 {
     float tx1 = (bMin.x - ray.O.x) / ray.D.x, tx2 = (bMax.x - ray.O.x) / ray.D.x;
     float tmin = std::min(tx1, tx2), tmax = std::max(tx1, tx2);
@@ -240,7 +267,10 @@ bool intersectAABB(const Ray& ray, const glm::vec3 bMin, const glm::vec3 bMax)
     tmin = std::max(tmin, std::min(ty1, ty2)), tmax = std::min(tmax, std::max(ty1, ty2));
     float tz1 = (bMin.z - ray.O.z) / ray.D.z, tz2 = (bMax.z - ray.O.z) / ray.D.z;
     tmin = std::max(tmin, std::min(tz1, tz2)), tmax = std::min(tmax, std::max(tz1, tz2));
-    return tmax >= tmin && tmin < ray.t&& tmax > 0;
+    if (tmax >= tmin && tmin < ray.t && tmax > 0)
+        return tmin;
+    else
+        return 1e30f;
 }
 
 float evaluateSAH(BVHNode& node, int axis, float pos)
@@ -286,13 +316,6 @@ inline glm::vec3 maxOf2(const glm::vec3& v1, const glm::vec3& v2)
     return glm::vec3(x, y, z);
 }
 
-inline void swap(Tri& tri1, Tri& tri2)
-{
-    Tri temp = tri1;
-    tri1 = tri2;
-    tri2 = temp;
-}
-
 inline void swap(uint& v1, uint& v2)
 {
     auto temp = v1;
@@ -331,9 +354,6 @@ float AABB::area()
 
 int main()
 {
-    //work in progress
-    assert(false);
-    
     //Generate triangles
     loadDataFromFile("assets/unity.tri");
 
@@ -391,4 +411,10 @@ int main()
 	return EXIT_SUCCESS;
 }
 
-
+template<typename T>
+inline void swap(T& v1, T& v2)
+{
+    auto temp = v1;
+    v1 = v2;
+    v2 = temp;
+}
