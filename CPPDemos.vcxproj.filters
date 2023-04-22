@@ -14,7 +14,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BVH-Step0.cpp">
+    <ClCompile Include="HelloIntrinsics.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
