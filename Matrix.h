@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <memory>
 namespace Matrix
 {
 	struct Matf
@@ -10,6 +11,7 @@ namespace Matrix
 		/// <param name="rws" type="size_t"> rows </param>
 		/// <param name="cls"> columns </param>
 		Matf(const size_t rws,const size_t cls);
+		Matf(const Matf& mat);
 		~Matf();
 		/// <summary>
 		/// copies data to given rowIndex
@@ -37,5 +39,6 @@ namespace Matrix
 	/// <returns> Matf </returns>
 	Matf multiply(Matf *m1,Matf *m2);
 
-	Matf identity(const size_t rws, const size_t cls);
+	//ToDo: Avoid unneccessary copy 
+	std::shared_ptr<Matf> identity(const size_t rws, const size_t cls);
 }
