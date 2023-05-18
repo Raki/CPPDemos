@@ -12,9 +12,13 @@
     <ClInclude Include="utils\CommonHeaders.h">
       <Filter>utils</Filter>
     </ClInclude>
+    <ClInclude Include="Matrix.h">
+      <Filter>utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="HelloIntrinsics.cpp">
+    <ClCompile Include="Matrix.cpp" />
+    <ClCompile Include="TestBedMatrix.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
